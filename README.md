@@ -1,19 +1,33 @@
-## Excel の複数シートをまとめて PDF 出力するツール
+## mog-excel-to-pdf
 
 Excel ブック内の複数シートをグループ選択し、1 つの PDF にまとめて出力します。COM 経由で Excel を操作するため Windows + Microsoft Excel 環境が必須です。
 
-### 前提
-- Windows 上で動作（`os.startfile` を使用）
-- Microsoft Excel がインストールされていること
-- Python 3.11 以上（`tomllib` を使用）
-- 依存パッケージ: `pywin32`, `pypdf2`（`pip install -r requirements.txt` か `pip install .`）
+![ツール概要](images/pic.png)
 
-### 使い方
-1. `config.toml` を編集して対象シートなどを指定します（下記参照）。
-2. PowerShell などで実行します。
+### 前提
+- Windows（COM 経由で Excel を操作します）
+- Microsoft Excel がインストールされていること
+- Python 3.11 以上
+
+### インストール（uv ベース）
+
+PyPI からインストールする場合:
 
 ```bash
-uv tool install -e .       # 初回のみ。mog-excel-to-pdf コマンドが入ります
+uv tool install mog-excel-to-pdf
+```
+
+リポジトリ直下の開発版を使う場合:
+
+```bash
+uv tool install --force -e .   # カレントリポジトリをツールとして登録
+```
+
+### 使い方
+1. `config.toml`（または任意の TOML）を用意します（サンプルは `sample_config.toml` を参照）。
+2. PowerShell / cmd から実行します。
+
+```bash
 mog-excel-to-pdf config.toml
 ```
 
