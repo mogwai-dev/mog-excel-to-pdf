@@ -1,6 +1,10 @@
 ## mog-excel-to-pdf
 
-Excel ブック内の複数シートをグループ選択し、1 つの PDF にまとめて出力します。COM 経由で Excel を操作するため Windows + Microsoft Excel 環境が必須です。
+[![PyPI version](https://badge.fury.io/py/mog-excel-to-pdf.svg)](https://pypi.org/project/mog-excel-to-pdf/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Excel ブック内の複数シートをグループ選択し、1 つの PDF にまとめて出力します。COM 経由で Excel を操作するため Windows + Microsoft Excel 環境が必須です.
 
 ![ツール概要](images/pic.png)
 

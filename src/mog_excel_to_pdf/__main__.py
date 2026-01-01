@@ -477,6 +477,7 @@ def main():
         description="Excel の複数シートをグループ選択して 1 つの PDF に出力。設定ファイルから全て読み込みます。Python 3.11+ 前提。"
     )
     parser.add_argument("config", help="TOML 設定ファイル（例：config.txt / config.toml）")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.0.0")
     args = parser.parse_args()
 
     cfg = load_toml(args.config)
