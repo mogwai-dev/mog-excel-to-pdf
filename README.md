@@ -85,3 +85,6 @@ Windows fatal exception: code 0x80010108
 
 ### ライセンス
 MIT License（同梱の LICENSE を参照）。
+
+コーヒーをお恵みくださると私が泣いて喜びます。(Click here)
+[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/mogwai.dev)
