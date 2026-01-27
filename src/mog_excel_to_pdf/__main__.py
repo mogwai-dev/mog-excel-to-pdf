@@ -4,6 +4,7 @@ import sys
 import time
 import argparse
 import tomllib  # Python 3.11+
+import yaml
 import pythoncom
 import win32com.client as win32
 from win32com.client import gencache, constants
@@ -38,9 +39,18 @@ def parse_semantic_version(name: str) -> tuple:
     else:
         return (1, None, name)
 
-def load_toml(path: str) -> dict:
-    with open(path, "rb") as f:
-        return tomllib.load(f)
+def load_config(path: str) -> dict:
+    """
+    設定ファイルを読み込む。拡張子で TOML/YAML を自動判定。
+    """
+    ext = Path(path).suffix.lower()
+    if ext in [".yaml", ".yml"]:
+        with open(path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    else:
+        # デフォルトは TOML
+        with open(path, "rb") as f:
+            return tomllib.load(f)
 
 def sanitize_filename(name: str, default: str = "まとめ.pdf") -> str:
     if not name:
@@ -549,11 +559,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Excel の複数シートをグループ選択して 1 つの PDF に出力。設定ファイルから全て読み込みます。Python 3.11+ 前提。"
     )
-    parser.add_argument("config", help="TOML 設定ファイル（例：config.txt / config.toml）")
+    parser.add_argument("config", help="設定ファイル（TOML または YAML、例：config.toml / config.yml）")
     parser.add_argument("--version", action="version", version="%(prog)s 1.0.0")
     args = parser.parse_args()
 
-    cfg = load_toml(args.config)
+    cfg = load_config(args.config)
     
     # ロガーを作成
     output_dir = cfg.get("output_dir", None)

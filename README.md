@@ -28,15 +28,18 @@ uv tool install --force -e .   # カレントリポジトリをツールとし�
 ```
 
 ### 使い方
-1. `config.toml`（または任意の TOML）を用意します（サンプルは `sample_config.toml` を参照）。
+1. `config.toml` または `config.yml`（または任意の TOML/YAML）を用意します（サンプルは `sample_config.toml` または `sample_config.yml` を参照）。
 2. PowerShell / cmd から実行します。
 
 ```bash
 mog-excel-to-pdf config.toml
+# または
+mog-excel-to-pdf config.yml
 ```
 
-### 設定ファイル例（TOML）
+### 設定ファイル例（TOML / YAML）
 
+**TOML形式の例:**
 ```toml
 # 単一ファイル
 excel_path = "example.xlsx"
@@ -54,7 +57,28 @@ include_hidden = true       # 非表示/VeryHidden のシートも対象に含�
 sort_sheets = false         # ソート方式（false: なし、"dict": 辞書順、"semantic": セマンティックバージョン順、省略可）
 ```
 
+**YAML形式の例:**
+```yaml
+# 単一ファイル
+excel_path: "example.xlsx"
+# または複数ファイル（指定順に統合）
+# excel_path:
+#   - "file1.xlsx"
+#   - "file2.xlsx"
+
+sheets: "all"               # "all" または ["Sheet1", "Sheet2"] のようにリストで指定
+exclude_sheets: ["tmp"]     # 除外したいシート名（省略可）
+exclude_suffixes: ["(2)"]   # サフィックスで除外（複数ファイル統合時にコピーシートが "(2)" 等になる場合に使用、省略可）
+pdf_filename: "まとめ.pdf"  # 出力する PDF 名（拡張子は自動付与）
+output_dir: "pdf_out"       # 出力フォルダ（省略時は最初の Excel ファイルと同じ場所）
+log_file: "output.log"      # ログファイル（省略時は出力フォルダ直下の excel_grouped_to_pdf.log）
+open_after_publish: false   # true なら出力後に自動で開く
+include_hidden: true        # 非表示/VeryHidden のシートも対象に含める
+sort_sheets: false          # ソート方式（false: なし、"dict": 辞書順、"semantic": セマンティックバージョン順、省略可）
+```
+
 設定のポイント:
+- ファイル形式は拡張子（`.toml`, `.yaml`, `.yml`）で自動判定されます。
 - `excel_path` は必須。単一ファイルは文字列、複数ファイルはリストで指定。複数指定時は指定順に統合して1つの PDF を生成します。
 - `sheets` が必須。`"all"` かシート名リストを指定します（複数ファイルでも同じシート設定が適用されます）。
 - `exclude_sheets` は `sheets` で指定した対象から完全一致で除外します。
