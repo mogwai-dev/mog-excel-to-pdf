@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mog-excel-to-pdf"
-version = "1.0.0"
+version = "1.1.0"
 description = "Excel の複数シートをグループ選択して PDF に出力するツール"
 readme = "README.md"
 requires-python = ">=3.11"

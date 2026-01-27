@@ -14,6 +14,28 @@ from pypdf import PdfWriter, PdfReader
 
 INVALID_CHARS = r'\\/:*?"<>|'
 
+def parse_semantic_version(name: str) -> tuple:
+    """
+    シート名の先頭からセマンティックバージョンを抽出。
+    例：
+      "1.0.1 xxx" -> (0, (1, 0, 1), "1.0.1 xxx")
+      "2.5 yyy" -> (0, (2, 5), "2.5 yyy")
+      "3 zzz" -> (0, (3,), "3 zzz")
+      "abc xyz" -> (1, None, "abc xyz")  # バージョン部分がない
+    
+    返り値は (has_version_flag, version_tuple, full_name) の形。
+    バージョンがある場合は has_version_flag=0 で優先、ない場合は has_version_flag=1。
+    """
+    import re
+    # 先頭の数字.数字(.数字)* パターンをマッチ
+    match = re.match(r'^([0-9]+(\.[0-9]+)*)', name)
+    if match:
+        version_str = match.group(1)
+        version_parts = tuple(int(x) for x in version_str.split('.'))
+        return (0, version_parts, name)
+    else:
+        return (1, None, name)
+
 def load_toml(path: str) -> dict:
     with open(path, "rb") as f:
         return tomllib.load(f)
@@ -103,7 +125,7 @@ def resolve_target_sheets(
     sheets_cfg,
     exclude_cfg: list[str],
     logger: logging.Logger,
-    sort_sheets: bool = False,
+    sort_sheets: bool | str = False,
     exclude_suffixes: list[str] | None = None,
 ) -> list[str]:
     """
@@ -164,10 +186,18 @@ def resolve_target_sheets(
             logger.info(f"サフィックス除外: {', '.join(dropped)}")
         target = filtered
 
-    # 辞書順でソート
-    if sort_sheets:
-        target = sorted(target)
-        logger.info(f"辞書順でソート: {', '.join(target)}")
+    # sort_sheets のバリデーション・ソート処理
+    if sort_sheets and len(target) > 1:
+        if sort_sheets is True or sort_sheets == "dict":
+            # 辞書順（アルファベット順）
+            target = sorted(target)
+            logger.info(f"辞書順でソート: {', '.join(target)}")
+        elif sort_sheets == "semantic":
+            # セマンティックバージョン順
+            target = sorted(target, key=parse_semantic_version)
+            logger.info(f"セマンティックバージョン順でソート: {', '.join(target)}")
+        else:
+            logger.info(f"警告: sort_sheets の値が不正です: {sort_sheets}")
 
     return target
 
@@ -189,6 +219,10 @@ def process_excel_to_pdf(config: dict, logger=None) -> Path:
     open_after_publish = config.get("open_after_publish", False)
     include_hidden = config.get("include_hidden", True)
     sort_sheets = config.get("sort_sheets", False)
+    # sort_sheets は False, "dict", "semantic", または True（互換性のため）
+    # true は "dict" に正規化
+    if sort_sheets is True:
+        sort_sheets = "dict"
     excel_path_cfg = config.get("excel_path")
     exclude_suffixes = config.get("exclude_suffixes", [])
     output_dir = config.get("output_dir", None)
@@ -315,10 +349,18 @@ def process_excel_to_pdf(config: dict, logger=None) -> Path:
                         # COM負荷軽減のため少し待機
                         time.sleep(0.3)
             
-            # 全体で辞書順ソート
+            # 全体でソート
             if sort_sheets and len(all_selectable) > 1:
-                all_selectable = sorted(all_selectable)
-                logger.info(f"全体を辞書順でソート: {', '.join(all_selectable)}")
+                if sort_sheets is True or sort_sheets == "dict":
+                    # 辞書順（アルファベット順）
+                    all_selectable = sorted(all_selectable)
+                    logger.info(f"全体を辞書順でソート: {', '.join(all_selectable)}")
+                elif sort_sheets == "semantic":
+                    # セマンティックバージョン順
+                    all_selectable = sorted(all_selectable, key=parse_semantic_version)
+                    logger.info(f"全体をセマンティックバージョン順でソート: {', '.join(all_selectable)}")
+                else:
+                    logger.info(f"警告: sort_sheets の値が不正です: {sort_sheets}")
             
             logger.info(f"\n対象シート（全体、順序どおり）: {', '.join(all_selectable) if all_selectable else '(なし)'}")
             

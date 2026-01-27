@@ -51,7 +51,7 @@ output_dir = "pdf_out"      # 出力フォルダ（省略時は最初の Excel �
 log_file = "output.log"     # ログファイル（省略時は出力フォルダ直下の excel_grouped_to_pdf.log）
 open_after_publish = false  # true なら出力後に自動で開く
 include_hidden = true       # 非表示/VeryHidden のシートも対象に含める
-sort_sheets = false         # true ならシート名を辞書順でソートしてから PDF 化（省略可）
+sort_sheets = false         # ソート方式（false: なし、"dict": 辞書順、"semantic": セマンティックバージョン順、省略可）
 ```
 
 設定のポイント:
@@ -65,7 +65,12 @@ sort_sheets = false         # true ならシート名を辞書順でソートし
   - ログファイル：出力フォルダ直下の `excel_grouped_to_pdf.log`。
 - `include_hidden` が `true` の場合、一時的にシートを可視化してから PDF 化し、終了時に元の表示状態へ戻します。
 - `open_after_publish` が `true` なら、PDF 生成後に既定のビューアで開きます。
-- `sort_sheets` が `true` の場合、対象シートを名前順（辞書順）でソートしてから PDF を出力します。複数ファイルの場合も、全ファイルのシートをまとめてソートします。
+- `sort_sheets` のソート方式：
+  - `false` : ソートなし（順序を維持します、既定値）
+  - `"dict"` : 辞書順（アルファベット順）。例：`"1.0.1 xxx"`, `"10.0.1 zzz"`, `"2.0.1 yyy"`
+  - `"semantic"` : セマンティックバージョン順。先頭の数値部分を比較します。例：`"1.0.1 xxx"`, `"2.0.1 yyy"`, `"10.0.1 zzz"`
+  - 複数ファイルの場合も、全ファイルのシートをまとめてソートします。
+  - バージョン部分がないシートは末尾に配置されます。
 
 ### 注意: COM 処理の終了時メッセージについて
 
