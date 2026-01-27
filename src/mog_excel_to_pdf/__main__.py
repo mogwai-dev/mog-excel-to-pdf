@@ -8,6 +8,8 @@ import pythoncom
 import win32com.client as win32
 from win32com.client import gencache, constants
 import logging
+import shutil
+import tempfile
 import glob
 from pathlib import Path
 from pypdf import PdfWriter, PdfReader
@@ -193,8 +195,14 @@ def resolve_target_sheets(
             target = sorted(target)
             logger.info(f"辞書順でソート: {', '.join(target)}")
         elif sort_sheets == "semantic":
-            # セマンティックバージョン順
-            target = sorted(target, key=parse_semantic_version)
+            # セマンティックバージョン順（同一バージョンは元の並びを維持、バージョンなしを先頭に）
+            target = sorted(
+                target,
+                key=lambda nm: (
+                    1 - parse_semantic_version(nm)[0],  # バージョンなしを優先
+                    parse_semantic_version(nm)[1] or (),
+                ),
+            )
             logger.info(f"セマンティックバージョン順でソート: {', '.join(target)}")
         else:
             logger.info(f"警告: sort_sheets の値が不正です: {sort_sheets}")
@@ -263,14 +271,21 @@ def process_excel_to_pdf(config: dict, logger=None) -> Path:
     copied_sheets = []  # コピーしたシートを記録
     all_selectable = []  # 全ファイルからの選択可能シート
     original_visibility = {}  # 全シートの可視状態
+    temp_main_path = None  # 最初のファイルの一時コピー
     
     try:
         # 複数ファイルの場合、最初のファイルをベースに他のファイルのシートをコピー
         if len(excel_paths) > 1:
             logger.info(f"\n--- 複数ファイルを統合してPDF化 ---")
             
-            # 最初のファイルを開く
-            main_wb = excel_app.Workbooks.Open(os.path.abspath(excel_paths[0]))
+            # 最初のファイルは一時コピーを作成してから開く（元ファイルを変更しない）
+            first_path = os.path.abspath(excel_paths[0])
+            first_ext = os.path.splitext(first_path)[1]
+            fd, temp_main_path = tempfile.mkstemp(suffix=first_ext)
+            os.close(fd)
+            shutil.copy2(first_path, temp_main_path)
+            logger.info(f"一時コピーを作成: {temp_main_path}")
+            main_wb = excel_app.Workbooks.Open(temp_main_path)
             
             # 最初のファイルのシートを処理
             logger.info(f"\n--- ファイル 1/{len(excel_paths)}: {excel_paths[0]} ---")
@@ -356,8 +371,14 @@ def process_excel_to_pdf(config: dict, logger=None) -> Path:
                     all_selectable = sorted(all_selectable)
                     logger.info(f"全体を辞書順でソート: {', '.join(all_selectable)}")
                 elif sort_sheets == "semantic":
-                    # セマンティックバージョン順
-                    all_selectable = sorted(all_selectable, key=parse_semantic_version)
+                    # セマンティックバージョン順（同一バージョンは元の並びを維持、バージョンなしを先頭に）
+                    all_selectable = sorted(
+                        all_selectable,
+                        key=lambda nm: (
+                            1 - parse_semantic_version(nm)[0],  # バージョンなしを優先
+                            parse_semantic_version(nm)[1] or (),
+                        ),
+                    )
                     logger.info(f"全体をセマンティックバージョン順でソート: {', '.join(all_selectable)}")
                 else:
                     logger.info(f"警告: sort_sheets の値が不正です: {sort_sheets}")
@@ -384,6 +405,11 @@ def process_excel_to_pdf(config: dict, logger=None) -> Path:
                 main_wb.Worksheets(all_selectable[0]).Select()
             else:
                 main_wb.Worksheets(all_selectable).Select()
+            
+            # PDF出力前に再計算
+            logger.info("再計算を実行中...")
+            excel_app.Calculate()
+            time.sleep(0.5)  # 再計算完了を待機
             
             excel_app.ActiveSheet.ExportAsFixedFormat(
                 Type=constants.xlTypePDF,
@@ -450,6 +476,11 @@ def process_excel_to_pdf(config: dict, logger=None) -> Path:
                 else:
                     main_wb.Worksheets(all_selectable).Select()
                 
+                # PDF出力前に再計算
+                logger.info("再計算を実行中...")
+                excel_app.Calculate()
+                time.sleep(0.5)  # 再計算完了を待機
+                
                 excel_app.ActiveSheet.ExportAsFixedFormat(
                     Type=constants.xlTypePDF,
                     Filename=out_pdf,
@@ -472,17 +503,7 @@ def process_excel_to_pdf(config: dict, logger=None) -> Path:
         raise
     
     finally:
-        # コピーしたシートを削除
-        if main_wb is not None and copied_sheets:
-            try:
-                for sheet_name in copied_sheets:
-                    try:
-                        main_wb.Worksheets(sheet_name).Delete()
-                        logger.info(f"コピーしたシートを削除: {sheet_name}")
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+        # コピーしたシートは保持（削除しない）
         
         # 可視状態を復元
         if main_wb is not None:
@@ -495,9 +516,17 @@ def process_excel_to_pdf(config: dict, logger=None) -> Path:
             except Exception:
                 pass
         
-        # ワークブックを閉じる
+        # ワークブックを保存・閉じる
         if main_wb is not None:
             try:
+                # 一時コピーを使用している場合は、コピーしたシートを残すため保存
+                if temp_main_path:
+                    try:
+                        main_wb.Save()
+                        logger.info(f"一時ファイルに保存: {temp_main_path}")
+                    except Exception:
+                        pass
+                # 保存済みでも二重保存しないため SaveChanges=False で閉じる
                 main_wb.Close(SaveChanges=False)
             except Exception:
                 pass
@@ -511,6 +540,8 @@ def process_excel_to_pdf(config: dict, logger=None) -> Path:
                 pass
             # COM解放の猶予を延長
             time.sleep(1.0)
+
+        # 一時コピーは残す
     
     return Path(out_pdf)
 
